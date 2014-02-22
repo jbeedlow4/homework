@@ -9,125 +9,97 @@
 #include <fstream>
 #include <new>
 #include <math.h>
+#include <vector>
 
-void convert(unsigned int, char*); 
-int sub_msk(struct Add, struct Add, struct Add);
-
-// Structure to hold binary values
-struct Add {
-	char* bin_1;
-	char* bin_2;
-	char* bin_3;
-	char* bin_4;
-	int	  subnet;
-
-	Add() {
-		bin_1 = new char[8];
-		bin_2 = new char[8];
-		bin_3 = new char[8];
-		bin_4 = new char[8];
-	}
-	void del() {
-		delete [] bin_1;
-		delete [] bin_2;
-		delete [] bin_3;
-		delete [] bin_4;
-	}
-
-};
+char* convert(unsigned int);
+int sub_msk(std::vector<char*>, std::vector<char*>, std::vector<char*>);
 
 int main() {
-	
-	struct Add IP_1, mask, IP_2;
-	unsigned int IP_int1[3], mask_int[3], IP_int2[3];
-	
-	// Asks user input for address
-	// Converts input to binary
-	//
-	printf("Please input the first IP address: \n");
-	scanf("%d.%d.%d.%d", &IP_int1[0] , &IP_int1[1], &IP_int1[2], &IP_int1[3]); IP_int1[4] = 0;
-	convert(IP_int1[0], IP_1.bin_1); IP_1.bin_1[8] = '\0';
-	convert(IP_int1[1], IP_1.bin_2); IP_1.bin_2[8] = '\0';
-	convert(IP_int1[2], IP_1.bin_3); IP_1.bin_3[8] = '\0';
-	convert(IP_int1[3], IP_1.bin_4); IP_1.bin_4[8] = '\0';
-	
+		// Vectors of char arrays to hold binary addresses
+		// Int arrays to hold decimal addresses
+		//
+		std::vector<char*> IP_1;
+		std::vector<char*> mask;
+		std::vector<char*> IP_2;
+		unsigned int IP_int1[4], mask_int[4], IP_int2[4];
 
-	printf("Please input the subnet mask: \n");
-	scanf("%d.%d.%d.%d", &mask_int[0] , &mask_int[1], &mask_int[2], &mask_int[3]); mask_int[4] = 0;
-	convert(mask_int[0], mask.bin_1); mask.bin_1[8] = '\0';
-	convert(mask_int[1], mask.bin_2); mask.bin_2[8] = '\0';
-	convert(mask_int[2], mask.bin_3); mask.bin_3[8] = '\0';
-	convert(mask_int[3], mask.bin_4); mask.bin_4[8] = '\0';
+		// Asks user for address input
+		// Converts decimal addresses to binary
+		//
+		printf("Please input the first IP address: \n");
+		scanf("%d.%d.%d.%d", &IP_int1[0], &IP_int1[1], &IP_int1[2], &IP_int1[3]);
+		IP_1.push_back(convert(IP_int1[0]));
+		IP_1.push_back(convert(IP_int1[1]));
+		IP_1.push_back(convert(IP_int1[2]));
+		IP_1.push_back(convert(IP_int1[3]));
 
-	printf("Please input the second IP address: \n");
-	scanf("%d.%d.%d.%d", &IP_int2[0] , &IP_int2[1], &IP_int2[2], &IP_int2[3]); IP_int2[4] = 0;
-	convert(IP_int2[0], IP_2.bin_1); IP_2.bin_1[8] = '\0';
-	convert(IP_int2[1], IP_2.bin_2); IP_2.bin_2[8] = '\0';
-	convert(IP_int2[2], IP_2.bin_3); IP_2.bin_3[8] = '\0';
-	convert(IP_int2[3], IP_2.bin_4); IP_2.bin_4[8] = '\0';
-	
-	// Prints addresses in binary
-	printf("\n Binary value of first IP Address: %s %s %s %s", IP_1.bin_1, IP_1.bin_2, IP_1.bin_3, IP_1.bin_4);
-	printf("\n Binary value of first IP Address: %s %s %s %s", mask.bin_1, mask.bin_2, mask.bin_3, mask.bin_4);
-	printf("\nBinary value of second IP Address: %s %s %s %s", IP_2.bin_1, IP_2.bin_2, IP_2.bin_3, IP_2.bin_4);
+		printf("Please input the subnet mask: \n");
+		scanf("%d.%d.%d.%d", &mask_int[0], &mask_int[1], &mask_int[2], &mask_int[3]);
+		mask.push_back(convert(mask_int[0]));
+		mask.push_back(convert(mask_int[1]));
+		mask.push_back(convert(mask_int[2]));
+		mask.push_back(convert(mask_int[3]));
 
-	// Applies subnet mask
-	printf("\n Now checking with subnet mask");
-	int foo;
-	foo = sub_msk(IP_1, mask, IP_2);
-	if(foo==1) 
-		printf("\n They are in the same subnet.");
-	else
-		printf("\n They are not in the same subnet.");
-	
-	IP_1.del(); mask.del(); IP_2.del();
-	return 0;
+		printf("Please input the second IP address: \n");
+		scanf("%d.%d.%d.%d", &IP_int2[0], &IP_int2[1], &IP_int2[2], &IP_int2[3]);
+		IP_2.push_back(convert(IP_int2[0]));
+		IP_2.push_back(convert(IP_int2[1]));
+		IP_2.push_back(convert(IP_int2[2]));
+		IP_2.push_back(convert(IP_int2[3]));
+
+		// Checks to see if address are in the same subnet
+		// Prints out status
+		//
+		int sub = 0;
+		sub = sub_msk(IP_1, mask, IP_2);
+		if(sub == 1) 
+			printf("The two IP addresses are in the same subnet.\n");
+		else
+			printf("The two IP addresses are not in the same subnet.\n");
+
+		return 0;
 }
 
 // Converts int value to binary stored in a char array
 //
-void convert(unsigned int val, char* buff) {
-	char t_buff[8];
+char* convert(unsigned int val) {
+	char* t_buff = new char [8];
+	char* r_buff = new char [8];
 	for (int i = 0; i < 8; ++i) {
 		t_buff[i] = '0' + (val & (1 << i) ? 1 : 0);
 	}
 	for (int a = 0, b = 7; a < 8; ++a, --b) {
-		buff[a] = t_buff[b];
+		r_buff[a] = t_buff[b];
 	}
-
+	r_buff[8] = '\0';
+	return r_buff;
 }
 
 // Applies subnet mask check
 //
-int sub_msk(Add add1, Add mask, Add add2) {
-	int s = 1;
-	for(int i = 0; i < 8; ++i) {
-		if(add1.bin_1[i] != add2.bin_1[i])
-			s = 0;
+int sub_msk(std::vector<char*> add1, std::vector<char*> mask, std::vector<char*> add2) {
+	int ret = 1;
+	char* temp1 = new char[8];
+	char* temp2 = new char[8];
+
+	for (int r = 0; r < 8; ++r) {
+		if((mask[0][r] == '1') && (mask[0][r] == add1[0][r]))
+			temp1[r] = '1';
+		else 
+			temp1[r] = '0';
+		if((mask[0][r] == '1') && (mask[0][r] == add2[0][r]))
+			temp2[r] = '1';
+		else 
+			temp2[r] = '0';
 	}
 
-	for(int i = 0; i < 8; ++i) {
-		if(add1.bin_2[i] != add2.bin_2[i])
-			s = 0;
-	}
-	//////////////////////////////////////////////////////////////////
-	// Excluded b/c subnet mask is only for first two digits
-	/*
-	for(int i = 0; i < 8; ++i) {
-		if(add1.bin_3[i] != add2.bin_3[i])
-			s = 0;
+	temp1[8] = '\0'; temp2[8] = '\0'; 
 
-	}
+	if((temp1[0] == temp2[0]) && (temp1[1] == temp2[1]) && (temp1[2] == temp2[2]) && (temp1[3] == temp2[3]) &&
+		(temp1[4] == temp2[4]) && (temp1[5] == temp2[5]) && (temp1[6] == temp2[6]) && (temp1[7] == temp2[7])) 
+		ret = 1;
+	else 
+		ret = 0;
 
-	for(int i = 0; i < 8; ++i) {
-		if(add1.bin_4[i] != add2.bin_4[i])
-			s = 0;
-	}
-	*/
-	//////////////////////////////////////////////////////////////////
-	if(s == 1) 
-		return 1;
-	else
-		return 0;
-
+	return ret;
 }
