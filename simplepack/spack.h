@@ -5,8 +5,11 @@
  * purpose is as a demonstration
  * of how any binary data can be
  * packed into a file.
+ *
+ *  Editied by: John Beedlow
+ *  Date:       03/27/2014
+ *  Version:    1.1
  *********************************/
-// Editied by: John Beedlow
 
 #include <stdio.h>
 

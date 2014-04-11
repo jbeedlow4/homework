@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <getopt.h>
+#include <stdint.h> 
 
 int main(int argc, char **argv){
 
@@ -36,40 +37,209 @@ int main(int argc, char **argv){
      * the struct as being correct.
      **********************************************/
     parse_args(argc, argv, &flags);
-    
+
     if( flags.list ){
-        //If this is true...the user requested
-        //a list of the files in flags.packfile
-        //so open it up, find all the filenames
-        //and file sizes and print them out.
-        //assume flags.packfile variable is the full
-        //path to the packed file to list.
-        printf("Listing files in %s.\n", flags.packfile);
-    }
-    
-    else if(flags.extract && flags.extract_single){
-        //If this is the case, then we open up the pack file,
-        //and look at each file until we find one with the
-        //same name as the one requested by the user (strcmp).
+		printf("Listing files in %s.\n", flags.packfile);
 
-        //If the requested file name isn't found in the pack
-        //file, then you need to print an error message and
-        //return a non-zero value! This is very important!
-        printf("Extracting just %s from %s into %s\n", flags.file_name, flags.packfile, flags.dest);
-    }
-    
-    else if( flags.extract ){
-        
-        //If this is the case, then we just want to open the
-        //pack file, and for each file we find in it, we write
-        //it out to the directory specified in flags.dest
-        printf("Extracting all files from %s into %s\n", flags.packfile, flags.dest);
-    }
+		// Variable that holds user input
+		char *packFile = argv[2];
 
-    //Only return 0 if everything succeeded!
-    return 0;
+		// Variables that hold file information
+		uint64_t fileSize;
+		short fileNameLen[1];
+
+		// Opens and tests packfile
+		FILE *leFile;
+		leFile = fopen(packFile, "r");
+		if (leFile == NULL) {
+			perror("File did not open\n");
+			exit(EXIT_FAILURE);
+		}
+
+		// Sets file pointer to size of filename
+		fseek(leFile, 4, SEEK_SET);
+	
+		// Loops untill at end of file
+		int p = 0;
+		while((p = fgetc(leFile)) != EOF) {
+			ungetc(p, leFile);
+
+			// Reads in the size of file name
+			fread(fileNameLen, sizeof(short), 1, leFile);
+
+			// Reads in the file name
+			char fileName[fileNameLen[0] + 1]; 
+			fread(fileName, sizeof(char), fileNameLen[0], leFile);
+			fileName[fileNameLen[0]] = '\0';
+
+			// Reads in the length of file size
+			fread(&fileSize, sizeof(uint64_t), 1, leFile);
+				
+			// Prints out file name and file size
+			printf("%-20lld\t%s\n", fileSize, fileName); //print_file_record(fileName, fileSize);
+
+			// Jumps file pointer to next file in pack file
+			fseek(leFile, fileSize, SEEK_CUR);	
+		}	
+	}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	else if(flags.extract && flags.extract_single){
+		printf("Extracting just %s from %s into %s\n", flags.file_name, flags.packfile, flags.dest);
+
+		// Variables that hold user input
+		char *path = argv[2];
+		char *file = argv[4];
+		char *packFile = argv[5];
+
+		// Variables that hold file information
+		uint64_t fileSize;
+		short fileNameLen[1];
+
+		// Opens and tests packfile
+		FILE *leFile;
+		leFile = fopen(packFile, "r");
+		if (leFile == NULL) {
+			perror("File did not open\n");
+			exit(EXIT_FAILURE);
+		}
+
+		// Sets file pointer to size of filename
+		fseek(leFile, 4, SEEK_CUR);
+	
+		// Loops untill at end of file or finds specified file
+		int p = 0;
+		while((p = fgetc(leFile)) != EOF) {
+			ungetc(p, leFile);
+
+			// Reads in the size of file name
+			fread(fileNameLen, sizeof(short), 1, leFile);
+
+			// Reads in the file name
+			char fileName[fileNameLen[0] + 1]; // Holds filename
+			fread(fileName, sizeof(char), fileNameLen[0], leFile);
+			fileName[fileNameLen[0]] = '\0'; 
+			
+			// Reads in the length of file size
+			fread(&fileSize, sizeof(uint64_t), 1, leFile);
+
+			// Checks to see if the file name matches
+			// If it does get full path
+			if((strcmp(file, fileName)) == 0) {
+				char newPath[128];
+				strcpy(newPath, path);
+				strcat(newPath, "/");
+				strcat(newPath, file);
+				printf("The new path is: %s\n", newPath);
+
+				// Creates file to hold the selected file and error handles
+				FILE *temp;
+				temp = fopen(newPath, "w");
+				if(temp == NULL){
+					fclose(leFile);
+					perror("Error: could not open new file");
+					exit(EXIT_FAILURE);
+				}
+
+				// Seeks back to beginning of specified file
+				fseek(leFile, -(fileSize), SEEK_CUR);
+				char buffer[32];
+
+				// Reads in one byte at a time and writes to specified directory
+				int i = 0;
+				while(i < fileSize) {
+					fread(buffer, sizeof(char), 1, leFile);
+					fwrite(buffer, sizeof(char), 1, temp);
+					++i;
+				}
+
+				// Closes files and exits
+				fclose(leFile);
+				fclose(temp);
+				exit(EXIT_SUCCESS);
+			}
+
+			// Jumps file pointer to next file in packfile
+			fseek(leFile, fileSize, SEEK_CUR);
+		}
+    }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	else if(flags.extract) {
+		printf("Extracting all files from %s into %s\n", flags.packfile, flags.dest);
+
+		// Variables that hold user input
+		char *path = argv[2];
+		char *packFile = argv[3];
+
+		// Variables that hold file information
+		uint64_t fileSize;
+		short fileNameLen[1];
+		FILE *temp;
+
+		// Opens and tests packfile
+		FILE *leFile;
+		leFile = fopen(packFile, "r");
+		if (leFile == NULL) {
+			perror("File did not open\n");
+			exit(EXIT_FAILURE);
+		}
+
+		// Sets file pointer to size of filename
+		fseek(leFile, 4, SEEK_CUR);
+	
+		// Loops untill at end of file or finds specified file
+		int p = 0;
+		while((p = fgetc(leFile)) != EOF) {
+			ungetc(p, leFile);
+
+			// Reads in the size of file name
+			fread(fileNameLen, sizeof(short), 1, leFile);
+
+			// Reads in the file name
+			char fileName[fileNameLen[0] + 1]; // Holds filename
+			fread(fileName, sizeof(char), fileNameLen[0], leFile);
+			fileName[fileNameLen[0]] = '\0'; 
+			
+			// Reads in the length of file size
+			fread(&fileSize, sizeof(uint64_t), 1, leFile);
+
+			// Creates file to hold the selected file and error handles
+			char newPath[128];
+			strcpy(newPath, path);
+			strcat(newPath, "/");
+			strcat(newPath, fileName);
+			temp = fopen(newPath, "w");
+			if(temp == NULL){
+				fclose(leFile);
+				perror("Error: could not open new file");
+				exit(EXIT_FAILURE);
+			}
+
+			// Seeks back to beginning of specified file
+			fseek(leFile, -(fileSize), SEEK_CUR);
+			char buffer[32];
+
+			// Reads in one byte at a time and writes to specified directory
+			int i = 0;
+			while(i < fileSize) {
+				fread(buffer, sizeof(char), 1, leFile);
+				fwrite(buffer, sizeof(char), 1, temp);
+				++i;
+			}
+			fclose(temp);
+
+			// Jumps file pointer to next file in packfile
+			fseek(leFile, fileSize, SEEK_CUR);
+		}
+
+	// Closes files and exits
+	fclose(leFile);
+	exit(EXIT_SUCCESS);
+	}
 }
-
 
 /**********************************************
  * usage
@@ -166,14 +336,4 @@ void parse_args(int argc, char **argv, struct sunpack_args * flags){
     }
 }
 
-/********************************************
- * This function prints out a single file
- * record from a pack file.
- *
- * Having everyone use the same function,
- * ensures that everyone's code will have
- * a uniform and testable output.
- *******************************************/
-void print_file_record(char *fname, long long fsize){
-    printf("%-20lld\t%s\n", fsize, fname);
-}
+
